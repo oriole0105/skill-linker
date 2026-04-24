@@ -6,20 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            artifact_name: skill-linker-linux
-            exe_path: dist/skill-linker
-          - os: windows-latest
-            artifact_name: skill-linker-windows
-            exe_path: dist/skill-linker.exe
-
-    runs-on: ${{ matrix.os }}
-
+  build-windows:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -30,19 +18,43 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
 
-      - name: Build executable
+      - name: Build
         run: uv run pyinstaller skill-linker.spec --clean --noconfirm
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: ${{ matrix.exe_path }}
+          name: skill-linker-windows
+          path: dist/skill-linker.exe
+          if-no-files-found: error
+
+  build-linux-rhel:
+    runs-on: ubuntu-latest
+    container:
+      image: rockylinux:9
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install curl and binutils
+        run: dnf install -y curl binutils
+
+      - name: Install uv + Python + build
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | env HOME=/root sh
+          export PATH="/root/.local/bin:$PATH"
+          uv python install 3.12
+          uv sync --group dev
+          uv run pyinstaller skill-linker.spec --clean --noconfirm
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skill-linker-linux-rhel9
+          path: dist/skill-linker
           if-no-files-found: error
 
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: build
+    needs: [build-windows, build-linux-rhel]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -53,12 +65,12 @@ jobs:
           path: artifacts
 
       - name: Make Linux binary executable
-        run: chmod +x artifacts/skill-linker-linux/skill-linker
+        run: chmod +x artifacts/skill-linker-linux-rhel9/skill-linker
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/skill-linker-linux/skill-linker
+            artifacts/skill-linker-linux-rhel9/skill-linker
             artifacts/skill-linker-windows/skill-linker.exe
           generate_release_notes: true
