@@ -1,7 +1,15 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import ClassVar
+
+# PyInstaller frozen builds extract files to sys._MEIPASS
+_CSS_PATH = (
+    Path(sys._MEIPASS) / "skill_linker" / "tui" / "style.tcss"
+    if hasattr(sys, "_MEIPASS")
+    else Path(__file__).parent / "style.tcss"
+)
 
 from textual import events
 from textual.app import App, ComposeResult, on
@@ -210,7 +218,7 @@ class TargetScreen(ModalScreen[TargetConfig | None]):
 
 class SkillLinkerApp(App):
     TITLE = "Skill Linker"
-    CSS_PATH = Path(__file__).parent / "style.tcss"
+    CSS_PATH = _CSS_PATH
 
     BINDINGS: ClassVar[list[Binding]] = [
         Binding("q", "quit", "離開"),

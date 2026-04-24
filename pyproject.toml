@@ -18,3 +18,8 @@ skill-linker = "skill_linker.main:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.20.0",
+]
