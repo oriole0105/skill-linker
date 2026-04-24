@@ -2,22 +2,6 @@ Screen {
     background: $surface;
 }
 
-#header {
-    height: 3;
-    background: $primary;
-    color: $text;
-    padding: 0 2;
-    content-align: left middle;
-}
-
-#footer-bar {
-    height: 3;
-    background: $primary-darken-2;
-    color: $text-muted;
-    padding: 0 2;
-    content-align: left middle;
-}
-
 #main-container {
     layout: horizontal;
     height: 1fr;
@@ -80,20 +64,9 @@ DataTable > .datatable--cursor {
     color: $text;
 }
 
-.status-linked {
-    color: $success;
-}
-
-.status-unlinked {
-    color: $text-muted;
-}
-
-.status-broken {
-    color: $error;
-}
-
-.status-direct {
-    color: $warning;
+FilterInput {
+    width: 1fr;
+    border: solid $primary-darken-1;
 }
 
 ConfirmScreen {
@@ -114,15 +87,9 @@ ConfirmScreen {
     margin-bottom: 1;
 }
 
-#confirm-buttons {
-    layout: horizontal;
-    height: auto;
+#confirm-hint {
+    color: $text-muted;
     margin-top: 1;
-    align: right middle;
-}
-
-#confirm-buttons Button {
-    margin-left: 1;
 }
 
 TargetScreen {
@@ -143,25 +110,43 @@ TargetScreen {
     margin-bottom: 1;
 }
 
-.target-option {
-    height: 1;
-    padding: 0 1;
+#target-hint {
+    color: $text-muted;
+    margin-top: 1;
 }
 
-.target-option:hover {
-    background: $primary-darken-1;
+SkillDetailScreen {
+    align: center middle;
 }
 
-.target-option.active {
-    color: $success;
+#detail-dialog {
+    width: 80;
+    height: 80%;
+    max-height: 40;
+    background: $surface;
+    border: solid $primary;
+    padding: 0 2;
 }
 
-FilterBar {
-    height: 3;
-    background: $primary-darken-2;
-    padding: 0 1;
+#detail-title {
+    text-style: bold;
+    color: $primary;
+    padding: 1 0 0 0;
 }
 
-#filter-input {
-    width: 1fr;
+#detail-source {
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+#detail-content {
+    height: 1fr;
+    overflow-y: auto;
+    border-top: solid $primary-darken-2;
+    padding: 1 0;
+}
+
+#detail-close {
+    margin-top: 1;
+    margin-bottom: 1;
 }

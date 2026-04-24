@@ -41,10 +41,27 @@ def _expand(p: str) -> Path:
     return Path(os.path.expandvars(os.path.expanduser(p)))
 
 
+def unexpand(path: Path) -> str:
+    """Convert absolute path back to ~ notation where possible."""
+    home = str(Path.home())
+    s = str(path)
+    if s.startswith(home + "/") or s == home:
+        return "~" + s[len(home):]
+    return s
+
+
+def save(config: Config) -> None:
+    data = {
+        "sources": [{"label": s.label, "path": unexpand(s.path)} for s in config.sources],
+        "targets": [{"name": t.name, "path": unexpand(t.path)} for t in config.targets],
+    }
+    CONFIG_PATH.write_text(yaml.dump(data, allow_unicode=True, default_flow_style=False))
+
+
 def load() -> Config:
     if not CONFIG_PATH.exists():
         _write_default()
-    raw = yaml.safe_load(CONFIG_PATH.read_text())
+    raw = yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8", errors="replace"))
     return Config(
         sources=[SourceConfig(label=s["label"], path=_expand(s["path"])) for s in raw.get("sources", [])],
         targets=[TargetConfig(name=t["name"], path=_expand(t["path"])) for t in raw.get("targets", [])],

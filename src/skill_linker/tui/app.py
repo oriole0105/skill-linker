@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import ClassVar
@@ -29,9 +30,10 @@ from textual.widgets import (
     Static,
 )
 
+from .. import config as config_mod
 from .. import linker as linker_mod
 from .. import scanner as scanner_mod
-from ..config import Config, TargetConfig
+from ..config import Config, SourceConfig, TargetConfig
 from ..scanner import LinkStatus, SkillEntry
 
 class SkillTable(DataTable):
@@ -83,12 +85,14 @@ STATUS_LABEL = {
 
 def _read_skill_md(entry: SkillEntry) -> str:
     skill_md = entry.source_path / "SKILL.md"
-    if skill_md.exists():
-        return skill_md.read_text()
-    # fallback: find any .md file
-    for f in entry.source_path.glob("*.md"):
-        return f.read_text()
-    return "_（此 skill 沒有描述文件）_"
+    target = skill_md if skill_md.exists() else next(entry.source_path.glob("*.md"), None)
+    if target is None:
+        return "_（此 skill 沒有描述文件）_"
+    try:
+        return target.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        # Unknown encoding — latin-1 maps every byte 0x00–0xff, never raises
+        return target.read_text(encoding="latin-1")
 
 
 class SkillDetailScreen(ModalScreen[None]):
@@ -216,12 +220,317 @@ class TargetScreen(ModalScreen[TargetConfig | None]):
         self.dismiss(None)
 
 
+class DeleteConfirmScreen(ModalScreen[bool]):
+    DEFAULT_CSS = """
+    DeleteConfirmScreen { align: center middle; }
+    #del-dialog { width: 50; height: auto; background: $surface; border: solid $error; padding: 1 2; }
+    #del-title { text-style: bold; color: $error; margin-bottom: 1; }
+    #del-hint { color: $text-muted; margin-top: 1; }
+    """
+    BINDINGS = [
+        Binding("y", "confirm", "確認 (Y)"),
+        Binding("escape,n", "cancel", "取消 (Esc/N)"),
+    ]
+
+    def __init__(self, item_name: str) -> None:
+        super().__init__()
+        self.item_name = item_name
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="del-dialog"):
+            yield Label("確認刪除", id="del-title")
+            yield Label(f"將刪除：{self.item_name}")
+            yield Label("按 Y 確認，Esc / N 取消", id="del-hint")
+
+    def action_confirm(self) -> None:
+        self.dismiss(True)
+
+    def action_cancel(self) -> None:
+        self.dismiss(False)
+
+
+class SourceFormScreen(ModalScreen["SourceConfig | None"]):
+    DEFAULT_CSS = """
+    SourceFormScreen { align: center middle; }
+    #src-form { width: 60; height: auto; background: $surface; border: solid $primary; padding: 1 2; }
+    #src-form-title { text-style: bold; color: $primary; margin-bottom: 1; }
+    .form-field-label { color: $text-muted; margin-top: 1; }
+    #src-form-hint { color: $text-muted; margin-top: 1; }
+    """
+    BINDINGS = [Binding("escape", "cancel", "取消")]
+
+    def __init__(self, source: SourceConfig | None = None) -> None:
+        super().__init__()
+        self._source = source
+
+    def compose(self) -> ComposeResult:
+        label_val = self._source.label if self._source else ""
+        path_val = config_mod.unexpand(self._source.path) if self._source else ""
+        title = "編輯 Source" if self._source else "新增 Source"
+        with Vertical(id="src-form"):
+            yield Label(title, id="src-form-title")
+            yield Label("Label：", classes="form-field-label")
+            yield Input(value=label_val, placeholder="Personal Skills", id="src-input-label")
+            yield Label("Path：", classes="form-field-label")
+            yield Input(value=path_val, placeholder="~/.agents/skills", id="src-input-path")
+            yield Label("Enter 確認  Esc 取消", id="src-form-hint")
+
+    def on_mount(self) -> None:
+        self.query_one("#src-input-label", Input).focus()
+
+    @on(Input.Submitted, "#src-input-label")
+    def _label_submitted(self, _: Input.Submitted) -> None:
+        self.query_one("#src-input-path", Input).focus()
+
+    @on(Input.Submitted, "#src-input-path")
+    def _path_submitted(self, _: Input.Submitted) -> None:
+        self._submit()
+
+    def _submit(self) -> None:
+        label = self.query_one("#src-input-label", Input).value.strip()
+        path_str = self.query_one("#src-input-path", Input).value.strip()
+        if not label or not path_str:
+            self.notify("Label 與 Path 不能為空", severity="error")
+            return
+        path = Path(os.path.expandvars(os.path.expanduser(path_str)))
+        self.dismiss(SourceConfig(label=label, path=path))
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
+class TargetFormScreen(ModalScreen["TargetConfig | None"]):
+    DEFAULT_CSS = """
+    TargetFormScreen { align: center middle; }
+    #tgt-form { width: 60; height: auto; background: $surface; border: solid $primary; padding: 1 2; }
+    #tgt-form-title { text-style: bold; color: $primary; margin-bottom: 1; }
+    .form-field-label { color: $text-muted; margin-top: 1; }
+    #tgt-form-hint { color: $text-muted; margin-top: 1; }
+    """
+    BINDINGS = [Binding("escape", "cancel", "取消")]
+
+    def __init__(self, target: TargetConfig | None = None) -> None:
+        super().__init__()
+        self._target = target
+
+    def compose(self) -> ComposeResult:
+        name_val = self._target.name if self._target else ""
+        path_val = config_mod.unexpand(self._target.path) if self._target else ""
+        title = "編輯 Target" if self._target else "新增 Target"
+        with Vertical(id="tgt-form"):
+            yield Label(title, id="tgt-form-title")
+            yield Label("Name：", classes="form-field-label")
+            yield Input(value=name_val, placeholder="Claude Code (global)", id="tgt-input-name")
+            yield Label("Path：", classes="form-field-label")
+            yield Input(value=path_val, placeholder="~/.claude/skills", id="tgt-input-path")
+            yield Label("Enter 確認  Esc 取消", id="tgt-form-hint")
+
+    def on_mount(self) -> None:
+        self.query_one("#tgt-input-name", Input).focus()
+
+    @on(Input.Submitted, "#tgt-input-name")
+    def _name_submitted(self, _: Input.Submitted) -> None:
+        self.query_one("#tgt-input-path", Input).focus()
+
+    @on(Input.Submitted, "#tgt-input-path")
+    def _path_submitted(self, _: Input.Submitted) -> None:
+        self._submit()
+
+    def _submit(self) -> None:
+        name = self.query_one("#tgt-input-name", Input).value.strip()
+        path_str = self.query_one("#tgt-input-path", Input).value.strip()
+        if not name or not path_str:
+            self.notify("Name 與 Path 不能為空", severity="error")
+            return
+        path = Path(os.path.expandvars(os.path.expanduser(path_str)))
+        self.dismiss(TargetConfig(name=name, path=path))
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
+class SettingsScreen(ModalScreen[bool]):
+    DEFAULT_CSS = """
+    SettingsScreen { align: center middle; }
+    #settings-dialog {
+        width: 84;
+        height: auto;
+        min-height: 18;
+        background: $surface;
+        border: solid $primary;
+        padding: 1 2;
+    }
+    #settings-title { text-style: bold; color: $primary; margin-bottom: 1; }
+    #settings-panels { layout: horizontal; height: 12; }
+    #settings-src-col { width: 1fr; padding-right: 1; border-right: ascii $primary-darken-2; }
+    #settings-tgt-col { width: 1fr; padding-left: 1; }
+    .settings-col-title { text-style: bold; color: $text-muted; }
+    .settings-col-list { height: 8; }
+    .settings-col-hint { color: $text-muted; height: 1; }
+    #settings-footer { color: $text-muted; margin-top: 1; }
+    """
+    BINDINGS = [
+        Binding("escape", "save_and_close", "儲存並離開"),
+        Binding("a", "add_entry", "新增"),
+        Binding("e", "edit_entry", "編輯"),
+        Binding("delete", "delete_entry", "刪除"),
+    ]
+
+    def __init__(self, config: Config) -> None:
+        super().__init__()
+        self._config = Config(sources=list(config.sources), targets=list(config.targets))
+        self._modified = False
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="settings-dialog"):
+            yield Label("設定", id="settings-title")
+            with Horizontal(id="settings-panels"):
+                with Vertical(id="settings-src-col"):
+                    yield Label("Sources", classes="settings-col-title")
+                    yield ListView(id="src-list", classes="settings-col-list")
+                    yield Label("[A] 新增  [E/Enter] 編輯  [Del] 刪除", classes="settings-col-hint")
+                with Vertical(id="settings-tgt-col"):
+                    yield Label("Targets", classes="settings-col-title")
+                    yield ListView(id="tgt-list", classes="settings-col-list")
+                    yield Label("[A] 新增  [E/Enter] 編輯  [Del] 刪除", classes="settings-col-hint")
+            yield Label("Tab 切換區塊  Esc 儲存並離開", id="settings-footer")
+
+    def on_mount(self) -> None:
+        self._reload_sources()
+        self._reload_targets()
+        self.query_one("#src-list", ListView).focus()
+
+    # ── list rebuild ─────────────────────────────────────────────
+
+    def _reload_sources(self) -> None:
+        lv = self.query_one("#src-list", ListView)
+        lv.clear()
+        for s in self._config.sources:
+            lv.append(ListItem(Label(f"{s.label}  ({config_mod.unexpand(s.path)})")))
+
+    def _reload_targets(self) -> None:
+        lv = self.query_one("#tgt-list", ListView)
+        lv.clear()
+        for t in self._config.targets:
+            lv.append(ListItem(Label(f"{t.name}  ({config_mod.unexpand(t.path)})")))
+
+    # ── focus tracking ────────────────────────────────────────────
+
+    def _active_panel(self) -> str:
+        """Return 'sources' or 'targets' based on which list contains the focused widget."""
+        src = self.query_one("#src-list", ListView)
+        node = self.focused
+        while node is not None:
+            if node is src:
+                return "sources"
+            node = node.parent
+        return "targets"
+
+    def _active_list_idx(self) -> tuple[str, ListView, int] | None:
+        panel = self._active_panel()
+        lv = self.query_one("#src-list" if panel == "sources" else "#tgt-list", ListView)
+        idx = lv.index
+        if idx is None:
+            return None
+        return panel, lv, idx
+
+    # ── Enter on list item = edit ─────────────────────────────────
+
+    @on(ListView.Selected, "#src-list")
+    def _src_enter(self, _: ListView.Selected) -> None:
+        self.action_edit_entry()
+
+    @on(ListView.Selected, "#tgt-list")
+    def _tgt_enter(self, _: ListView.Selected) -> None:
+        self.action_edit_entry()
+
+    # ── actions ───────────────────────────────────────────────────
+
+    def action_add_entry(self) -> None:
+        if self._active_panel() == "sources":
+            def handle(result: SourceConfig | None) -> None:
+                if result:
+                    self._config.sources.append(result)
+                    self._modified = True
+                    self._reload_sources()
+            self.app.push_screen(SourceFormScreen(), handle)
+        else:
+            def handle(result: TargetConfig | None) -> None:
+                if result:
+                    self._config.targets.append(result)
+                    self._modified = True
+                    self._reload_targets()
+            self.app.push_screen(TargetFormScreen(), handle)
+
+    def action_edit_entry(self) -> None:
+        info = self._active_list_idx()
+        if not info:
+            return
+        panel, _, idx = info
+        if panel == "sources":
+            if idx >= len(self._config.sources):
+                return
+            current = self._config.sources[idx]
+            captured = idx
+            def handle(result: SourceConfig | None) -> None:
+                if result:
+                    self._config.sources[captured] = result
+                    self._modified = True
+                    self._reload_sources()
+            self.app.push_screen(SourceFormScreen(current), handle)
+        else:
+            if idx >= len(self._config.targets):
+                return
+            current = self._config.targets[idx]
+            captured = idx
+            def handle(result: TargetConfig | None) -> None:
+                if result:
+                    self._config.targets[captured] = result
+                    self._modified = True
+                    self._reload_targets()
+            self.app.push_screen(TargetFormScreen(current), handle)
+
+    def action_delete_entry(self) -> None:
+        info = self._active_list_idx()
+        if not info:
+            return
+        panel, _, idx = info
+        if panel == "sources":
+            if idx >= len(self._config.sources):
+                return
+            item_name = self._config.sources[idx].label
+            captured = idx
+            def handle(confirmed: bool) -> None:
+                if confirmed:
+                    self._config.sources.pop(captured)
+                    self._modified = True
+                    self._reload_sources()
+            self.app.push_screen(DeleteConfirmScreen(item_name), handle)
+        else:
+            if idx >= len(self._config.targets):
+                return
+            item_name = self._config.targets[idx].name
+            captured = idx
+            def handle(confirmed: bool) -> None:
+                if confirmed:
+                    self._config.targets.pop(captured)
+                    self._modified = True
+                    self._reload_targets()
+            self.app.push_screen(DeleteConfirmScreen(item_name), handle)
+
+    def action_save_and_close(self) -> None:
+        if self._modified:
+            config_mod.save(self._config)
+        self.dismiss(self._modified)
+
+
 class SkillLinkerApp(App):
     TITLE = "Skill Linker"
     CSS_PATH = _CSS_PATH
 
     BINDINGS: ClassVar[list[Binding]] = [
         Binding("q", "quit", "離開"),
+        Binding("s", "open_settings", "設定"),
         Binding("t", "switch_target", "切換 Target"),
         Binding("r", "refresh", "重新整理"),
         Binding("a", "select_all", "全選"),
@@ -264,6 +573,8 @@ class SkillLinkerApp(App):
 
     def _refresh_data(self) -> None:
         self.entries = scanner_mod.scan(self.config, self.current_target)
+        # Sync selected to match current reality: linked skills are pre-selected
+        self.selected = {e.name for e in self.entries if e.status == LinkStatus.LINKED}
         self._rebuild_table()
         self.sub_title = f"Target: {self.current_target.path}"
 
@@ -333,11 +644,25 @@ class SkillLinkerApp(App):
         self._refresh_data()
         self.notify("已重新整理")
 
+    def action_open_settings(self) -> None:
+        def handle(modified: bool) -> None:
+            if modified:
+                self.config = config_mod.load()
+                self._rebuild_source_panel()
+                self._refresh_data()
+        self.push_screen(SettingsScreen(self.config), handle)
+
+    def _rebuild_source_panel(self) -> None:
+        panel = self.query_one("#source-panel", Vertical)
+        for item in panel.query(".source-item"):
+            item.remove()
+        for src in self.config.sources:
+            panel.mount(Label(f"  {src.label}", classes="source-item"))
+
     def action_switch_target(self) -> None:
         def handle(result: TargetConfig | None) -> None:
             if result:
                 self.current_target = result
-                self.selected.clear()
                 self._refresh_data()
 
         self.push_screen(TargetScreen(self.config, self.current_target), handle)
