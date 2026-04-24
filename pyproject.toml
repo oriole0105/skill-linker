@@ -1,0 +1,20 @@
+[project]
+name = "skill-linker"
+version = "0.1.0"
+description = "Manage AI tool skills via symlinks"
+readme = "README.md"
+authors = [
+    { name = "oriole0105", email = "oriole0105@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "pyyaml>=6.0.3",
+    "textual>=8.2.4",
+]
+
+[project.scripts]
+skill-linker = "skill_linker.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

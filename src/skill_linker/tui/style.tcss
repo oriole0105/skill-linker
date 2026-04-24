@@ -1,0 +1,167 @@
+Screen {
+    background: $surface;
+}
+
+#header {
+    height: 3;
+    background: $primary;
+    color: $text;
+    padding: 0 2;
+    content-align: left middle;
+}
+
+#footer-bar {
+    height: 3;
+    background: $primary-darken-2;
+    color: $text-muted;
+    padding: 0 2;
+    content-align: left middle;
+}
+
+#main-container {
+    layout: horizontal;
+    height: 1fr;
+}
+
+#source-panel {
+    width: 24;
+    border-right: solid $primary-darken-1;
+    padding: 0 1;
+}
+
+#source-panel-title {
+    color: $text-muted;
+    text-style: bold;
+    padding: 1 0 0 0;
+}
+
+.source-item {
+    height: 1;
+    padding: 0 1;
+    color: $text;
+}
+
+.source-item:hover {
+    background: $primary-darken-1;
+}
+
+.source-item.selected {
+    background: $accent;
+    color: $text;
+}
+
+#skill-panel {
+    width: 1fr;
+    padding: 0 1;
+}
+
+#skill-panel-title {
+    color: $text-muted;
+    text-style: bold;
+    padding: 1 0 0 0;
+}
+
+SkillTable {
+    height: 1fr;
+}
+
+DataTable {
+    height: 1fr;
+}
+
+DataTable > .datatable--header {
+    background: $primary-darken-2;
+    color: $text-muted;
+    text-style: bold;
+}
+
+DataTable > .datatable--cursor {
+    background: $accent;
+    color: $text;
+}
+
+.status-linked {
+    color: $success;
+}
+
+.status-unlinked {
+    color: $text-muted;
+}
+
+.status-broken {
+    color: $error;
+}
+
+.status-direct {
+    color: $warning;
+}
+
+ConfirmScreen {
+    align: center middle;
+}
+
+#confirm-dialog {
+    width: 60;
+    height: auto;
+    background: $surface;
+    border: solid $primary;
+    padding: 1 2;
+}
+
+#confirm-title {
+    text-style: bold;
+    color: $primary;
+    margin-bottom: 1;
+}
+
+#confirm-buttons {
+    layout: horizontal;
+    height: auto;
+    margin-top: 1;
+    align: right middle;
+}
+
+#confirm-buttons Button {
+    margin-left: 1;
+}
+
+TargetScreen {
+    align: center middle;
+}
+
+#target-dialog {
+    width: 50;
+    height: auto;
+    background: $surface;
+    border: solid $primary;
+    padding: 1 2;
+}
+
+#target-title {
+    text-style: bold;
+    color: $primary;
+    margin-bottom: 1;
+}
+
+.target-option {
+    height: 1;
+    padding: 0 1;
+}
+
+.target-option:hover {
+    background: $primary-darken-1;
+}
+
+.target-option.active {
+    color: $success;
+}
+
+FilterBar {
+    height: 3;
+    background: $primary-darken-2;
+    padding: 0 1;
+}
+
+#filter-input {
+    width: 1fr;
+}
