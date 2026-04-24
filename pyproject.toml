@@ -1,6 +1,6 @@
 [project]
 name = "skill-linker"
-version = "0.1.0"
+version = "1.1.0"
 description = "Manage AI tool skills via symlinks"
 readme = "README.md"
 authors = [

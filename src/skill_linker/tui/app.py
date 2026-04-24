@@ -30,6 +30,7 @@ from textual.widgets import (
     Static,
 )
 
+from .. import __author__, __version__
 from .. import config as config_mod
 from .. import linker as linker_mod
 from .. import scanner as scanner_mod
@@ -526,6 +527,7 @@ class SettingsScreen(ModalScreen[bool]):
 
 class SkillLinkerApp(App):
     TITLE = "Skill Linker"
+    SUB_TITLE = f"v{__version__} · {__author__}"
     CSS_PATH = _CSS_PATH
 
     BINDINGS: ClassVar[list[Binding]] = [
