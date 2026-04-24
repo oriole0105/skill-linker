@@ -19,6 +19,13 @@ Screen {
     padding: 1 0 0 0;
 }
 
+#version-info {
+    dock: bottom;
+    color: $text-muted;
+    text-align: center;
+    padding: 0 1 1 1;
+}
+
 .source-item {
     height: 1;
     padding: 0 1;

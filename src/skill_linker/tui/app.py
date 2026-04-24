@@ -30,7 +30,7 @@ from textual.widgets import (
     Static,
 )
 
-from .. import __author__, __version__
+from .. import __version__
 from .. import config as config_mod
 from .. import linker as linker_mod
 from .. import scanner as scanner_mod
@@ -527,7 +527,6 @@ class SettingsScreen(ModalScreen[bool]):
 
 class SkillLinkerApp(App):
     TITLE = "Skill Linker"
-    SUB_TITLE = f"v{__version__} · {__author__}"
     CSS_PATH = _CSS_PATH
 
     BINDINGS: ClassVar[list[Binding]] = [
@@ -556,6 +555,7 @@ class SkillLinkerApp(App):
                 yield Label("Sources", id="source-panel-title")
                 for src in self.config.sources:
                     yield Label(f"  {src.label}", classes="source-item")
+                yield Label(f"v{__version__}", id="version-info")
             with Vertical(id="skill-panel"):
                 yield Label("Skills", id="skill-panel-title")
                 yield FilterInput(placeholder="Filter... (F 進入，Esc 離開)", id="filter-input")
