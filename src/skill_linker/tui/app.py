@@ -563,6 +563,7 @@ class SkillLinkerApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
+        self.query_one("HeaderIcon").icon = "☰ Menu"
         self._setup_table()
         self._refresh_data()
 

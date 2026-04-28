@@ -2,6 +2,10 @@ Screen {
     background: $surface;
 }
 
+HeaderIcon {
+    width: 10;
+}
+
 #main-container {
     layout: horizontal;
     height: 1fr;
